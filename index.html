@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>森都心プラザ 備品カウンター</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --btn-bg: #e5e5ea;
+            --text-main: #000;
+            --text-sub: #8e8e93;
+            --accent: #007aff;
+            --danger: #ff3b30;
+            --warning: #ff9500;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px 16px 100px;
+            color: var(--text-main);
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1c1c1e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-row {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .count-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            border: none;
+            background-color: var(--btn-bg);
+            font-size: 32px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.1s;
+            touch-action: manipulation;
+        }
+
+        .count-btn:active {
+            background-color: #d1d1d6;
+            transform: scale(0.95);
+        }
+
+        .item-info {
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .item-count {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #c6c6c8;
+            padding: 16px;
+            display: flex;
+            justify-content: space-around;
+            box-sizing: border-box;
+            z-index: 100;
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 16px;
+            font-weight: 600;
+            padding: 10px 20px;
+        }
+
+        .action-btn.danger {
+            color: var(--danger);
+        }
+
+        #editModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: end;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            width: 100%;
+            height: 85vh;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            overflow-y: auto;
+            box-sizing: border-box;
+            animation: slideUp 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .edit-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            background: white;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 15px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        .btn-reset-default {
+            background: transparent;
+            color: var(--danger);
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: auto;
+            margin-bottom: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>📋 備品カウンター</h1>
+
+    <div id="counter-list">
+        </div>
+
+    <div class="bottom-bar">
+        <button class="action-btn danger" onclick="resetCounts()">リセット</button>
+        <button class="action-btn" onclick="openEditModal()">リスト編集</button>
+    </div>
+
+    <div id="editModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h2 style="margin:0;">項目を編集</h2>
+                <button class="action-btn" onclick="closeEditModal()">閉じる</button>
+            </div>
+            
+            <div id="edit-list"></div>
+            
+            <button class="btn-primary" onclick="addNewItemPrompt()">＋ 新しい項目を追加</button>
+            
+            <hr style="width:100%; border:0; border-top:1px solid #ddd; margin: 20px 0;">
+            
+            <button class="btn-reset-default" onclick="resetToDefaults()">⚠ 初期リストに戻す</button>
+            <p style="text-align:center; font-size:12px; color:#888;">項目が増えすぎたり、おかしくなった時に使ってください。</p>
+        </div>
+    </div>
+
+    <script>
+        // ▼▼▼ もしYoshiがさらにリストを変えてたら、ここを書き換えてね ▼▼▼
+        const defaultItems = [
+            { id: 1, name: '机', count: 0 },
+            { id: 2, name: 'イス', count: 0 },
+            { id: 3, name: '展示パネル', count: 0 },
+            { id: 4, name: '譜面台', count: 0 },
+            { id: 5, name: '1kwスポットライト', count: 0 },
+            { id: 6, name: '500wスポットライト', count: 0 },
+            { id: 7, name: 'Par(500w)', count: 0 },
+            { id: 8, name: '照明スタンド', count: 0 }
+        ];
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        let items = [];
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // 音を鳴らす関数（isPlus が true なら高い音、false なら低い音）
+        function playSound(isPlus) {
+            if (!audioCtx) initAudio();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (isPlus) {
+                // ＋の時：高めのサイン波（ピポッ）
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // ラの音
+                osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1);
+            } else {
+                // −の時：低めの三角波（プッ）
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+            }
+
+            // 音量フェードアウト
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        window.onload = function() {
+            const savedData = localStorage.getItem('kumamotoPlazaTally');
+            if (savedData) {
+                items = JSON.parse(savedData);
+            } else {
+                items = JSON.parse(JSON.stringify(defaultItems));
+            }
+            renderList();
+            
+            document.body.addEventListener('touchstart', initAudio, {once:true});
+            document.body.addEventListener('click', initAudio, {once:true});
+        };
+
+        function saveData() {
+            localStorage.setItem('kumamotoPlazaTally', JSON.stringify(items));
+        }
+
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+
+        function updateCount(id, change) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                if (item.count + change >= 0) {
+                    item.count += change;
+                    vibrate();
+                    
+                    // change > 0 なら true（プラス音）、そうでなければ false（マイナス音）
+                    playSound(change > 0); 
+                    
+                    renderList();
+                    saveData();
+                }
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('counter-list');
+            container.innerHTML = '';
+
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'item-row';
+                row.innerHTML = `
+                    <button class="count-btn" onclick="updateCount(${item.id}, -1)">−</button>
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-count">${item.count}</div>
+                    </div>
+                    <button class="count-btn" onclick="updateCount(${item.id}, 1)">＋</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function resetCounts() {
+            if(confirm('全てのカウンターをリセットします。')) {
+                items.forEach(i => i.count = 0);
+                renderList();
+                saveData();
+            }
+        }
+
+        // --- 編集・リセット関連 ---
+
+        function openEditModal() {
+            const container = document.getElementById('edit-list');
+            container.innerHTML = '';
+            items.forEach((item, index) => {
+                container.innerHTML += `
+                    <div class="edit-row">
+                        <input type="text" value="${item.name}" onchange="updateName(${item.id}, this.value)">
+                        <button class="btn-delete" onclick="deleteItem(${index})">削除</button>
+                    </div>
+                `;
+            });
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            renderList();
+        }
+
+        function updateName(id, newName) {
+            const item = items.find(i => i.id === id);
+            if(item) {
+                item.name = newName;
+                saveData();
+            }
+        }
+
+        function deleteItem(index) {
+            if(confirm('この項目を削除しますか？')) {
+                items.splice(index, 1);
+                saveData();
+                openEditModal();
+            }
+        }
+
+        function addNewItemPrompt() {
+            const name = prompt('新しい項目の名前を入力してください');
+            if (name) {
+                const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+                items.push({ id: newId, name: name, count: 0 });
+                saveData();
+                openEditModal();
+            }
+        }
+
+        function resetToDefaults() {
+            if(confirm('初期リストに戻します。\n追加・変更した項目は全て消去されます。')) {
+                items = JSON.parse(JSON.stringify(defaultItems));
+                saveData();
+                renderList();
+                closeEditModal();
+                alert('初期リストに戻しました。');
+            }
+        }
+    </script>
+</body>
+</html>
